@@ -1,0 +1,176 @@
+{
+  "name": "AI Invoice Automation Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "invoice-process",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*",
+          "binaryPropertyName": "data",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "content-type"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -3424,
+        1408
+      ],
+      "id": "36a514c5-f666-48b6-9668-23f73eb5429e",
+      "name": "Trigger from the UI",
+      "webhookId": "30466b9d-9d5d-4b1c-9355-4fcb506b4b81"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "text": "You are an expert invoice data extraction AI.\n\nCarefully read the entire invoice document and extract all available structured data.\n\nIf the invoice contains many line items, extract all of them and ensure the JSON remains valid.\n\nIMPORTANT RULES:\n- Read the entire document before extracting data.\n- Return ONLY valid JSON.\n- Do NOT include explanations, text, or markdown.\n- Never truncate the JSON.\n- Always complete the JSON structure.\n- If a field is missing, return null.\n- Extract numbers as numbers (not strings) when possible.\n\nExtract the following fields.\n\nReturn the result in this exact JSON structure:\n\n{\n  \"vendor\": {\n    \"name\": \"\",\n    \"address\": \"\",\n    \"city\": \"\",\n    \"state\": \"\",\n    \"postal_code\": \"\",\n    \"country\": \"\",\n    \"email\": \"\",\n    \"phone\": \"\"\n  },\n\n  \"ship_from\": {\n    \"name\": \"\",\n    \"address\": \"\",\n    \"city\": \"\",\n    \"state\": \"\",\n    \"postal_code\": \"\",\n    \"country\": \"\"\n  },\n\n  \"ship_to\": {\n    \"name\": \"\",\n    \"address\": \"\",\n    \"city\": \"\",\n    \"state\": \"\",\n    \"postal_code\": \"\",\n    \"country\": \"\"\n  },\n\n  \"invoice_details\": {\n    \"invoice_number\": \"\",\n    \"invoice_date\": \"\",\n    \"due_date\": \"\",\n    \"purchase_order_number\": \"\",\n    \"currency\": \"\"\n  },\n\n  \"amounts\": {\n    \"subtotal\": 0,\n    \"tax\": 0,\n    \"discount\": 0,\n    \"shipping\": 0,\n    \"total\": 0\n  },\n\n  \"line_items\": [\n    {\n      \"description\": \"\",\n      \"quantity\": 0,\n      \"unit_price\": 0,\n      \"tax\": 0,\n      \"total\": 0\n    }\n  ]\n}",
+        "inputType": "base64",
+        "binaryPropertyName": "=data0",
+        "options": {
+          "maxTokens": 1000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        -3200,
+        1408
+      ],
+      "id": "2e188d6d-272e-41f7-b2d2-fc5af5d03a53",
+      "name": "Analyze image",
+      "credentials": {
+        "openAiApi": {
+          "id": "G0R3DKjO5C37uSCX",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.output[0].content[0].text }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -2624,
+        1408
+      ],
+      "id": "649c3fac-a743-4b0a-b88e-c091dec6f27b",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list",
+          "cachedResultName": "GPT-3.5-TURBO"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a helpful bot that turns non formatted/json text and converts it into a formatted data with headers and columns"
+            },
+            {
+              "content": "=Please turn this into data structured data and with columns and headers: \nAnd do not make a table.\n{{ $json['0'].content[0].text }}\n\nTurn the data into this format:\nVendor name:\nDate:\nAddress:\nProduct: \n\nAnd other things according to the invoice."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        -2976,
+        1408
+      ],
+      "id": "72a1e840-6735-4dbe-bae1-1afacf5b4720",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "G0R3DKjO5C37uSCX",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger from the UI": {
+      "main": [
+        [
+          {
+            "node": "Analyze image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "7ded7463-446a-42d2-8609-8bd7ab4fbda6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ccf611f23bfd4ea834e69f2029f72b3aba35e9f5ee998b58995b20e2ddd369f8"
+  },
+  "id": "WGgHycVOTxKd6oV6",
+  "tags": []
+}

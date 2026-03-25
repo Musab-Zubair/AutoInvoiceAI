@@ -1,0 +1,175 @@
+{
+  "name": "AI Invoice Automation Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "invoice-process",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*",
+          "binaryPropertyName": "data",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "content-type"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2debc04c-a94b-43ab-b438-e66f6c61f378",
+      "name": "Trigger from the UI",
+      "webhookId": "30466b9d-9d5d-4b1c-9355-4fcb506b4b81"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "text": "You are an expert invoice data extraction AI.\n\nCarefully read the entire invoice document and extract all available structured data.\n\nIf the invoice contains many line items, extract all of them and ensure the JSON remains valid.\n\nIMPORTANT RULES:\n- Read the entire document before extracting data.\n- Return ONLY valid JSON.\n- Do NOT include explanations, text, or markdown.\n- Never truncate the JSON.\n- Always complete the JSON structure.\n- If a field is missing, return null.\n- Extract numbers as numbers (not strings) when possible.\n\nExtract the following fields.\n\nReturn the result in this exact JSON structure:\n\n{\n  \"vendor\": {\n    \"name\": \"\",\n    \"address\": \"\",\n    \"city\": \"\",\n    \"state\": \"\",\n    \"postal_code\": \"\",\n    \"country\": \"\",\n    \"email\": \"\",\n    \"phone\": \"\"\n  },\n\n  \"ship_from\": {\n    \"name\": \"\",\n    \"address\": \"\",\n    \"city\": \"\",\n    \"state\": \"\",\n    \"postal_code\": \"\",\n    \"country\": \"\"\n  },\n\n  \"ship_to\": {\n    \"name\": \"\",\n    \"address\": \"\",\n    \"city\": \"\",\n    \"state\": \"\",\n    \"postal_code\": \"\",\n    \"country\": \"\"\n  },\n\n  \"invoice_details\": {\n    \"invoice_number\": \"\",\n    \"invoice_date\": \"\",\n    \"due_date\": \"\",\n    \"purchase_order_number\": \"\",\n    \"currency\": \"\"\n  },\n\n  \"amounts\": {\n    \"subtotal\": 0,\n    \"tax\": 0,\n    \"discount\": 0,\n    \"shipping\": 0,\n    \"total\": 0\n  },\n\n  \"line_items\": [\n    {\n      \"description\": \"\",\n      \"quantity\": 0,\n      \"unit_price\": 0,\n      \"tax\": 0,\n      \"total\": 0\n    }\n  ]\n}",
+        "inputType": "base64",
+        "binaryPropertyName": "=data0",
+        "options": {
+          "maxTokens": 1000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "2a224788-5b44-43a9-a553-f9f4405982f3",
+      "name": "Analyze image",
+      "credentials": {
+        "openAiApi": {
+          "id": "EqcoiCPCwdEtoqHf",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.output[0].content[0].text }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        800,
+        0
+      ],
+      "id": "5b8bb8da-a246-467d-83fe-c8ce56be3dc0",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list",
+          "cachedResultName": "GPT-3.5-TURBO"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a helpful bot that turns non formatted/json text and converts it into a formatted data with headers and columns"
+            },
+            {
+              "content": "=Please turn this data into data with columns and headers: \n\n{{ $json['0'].content[0].text }}\n\nUSE THIS FORMAT ONLY!:\n\nInvoice Details\n\nInvoice Number [ ]\nDate [ ]\nDue Date [ ]\n\nVendor Information\n\nVendor Name [ ]\nAddress [ ]\n\nBilling Information\n\nBill To [ ]\n\nItem Details\n\nLine Items [ ]\nDescription [ ]\nQuantity [ ]\nUnit Price [ ]\n\nPricing Summary\n\nSubtotal [ ]\nDiscount [ ]\nShipping [ ]\nTax [ ]\nTotal [ ]\n\n\nADD THE INFO IN THESE [INFO]\nAnd other things according to the invoice."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "720d8f76-1439-43ba-836a-cff3fab08090",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "EqcoiCPCwdEtoqHf",
+          "name": "OpenAi account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger from the UI": {
+      "main": [
+        [
+          {
+            "node": "Analyze image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "383a597c-dba0-4a47-82d2-d9b2323455de",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d6657d931323cffdf1ba73811382bc2c7a4cd1dd547c8c113aa2506e0a21d72f"
+  },
+  "id": "TjN9yYa0LHtHEqIp",
+  "tags": []
+}
